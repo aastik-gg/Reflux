@@ -4,13 +4,10 @@
  */
 
 const fs = require('fs');
-const path = require('path');
-const { replaceTools } = require('./mcpRegistry');
+const { WORKFLOWS_PATH } = require('../config/paths');
+const { replaceTools, loadTools } = require('./mcpRegistry');
 const { generateOptimizedTools } = require('./toolOptimizer');
-const { loadTools } = require('./mcpRegistry');
 const { isMcpConnected, syncToolsFromMcp } = require('./mcpConnection');
-
-const WORKFLOWS_PATH = path.join(__dirname, '../data/workflows.json');
 
 /**
  * Remove internal metadata fields before saving tools.

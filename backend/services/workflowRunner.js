@@ -17,9 +17,8 @@ const { loadTools, replaceTools } = require('./mcpRegistry');
 const { saveWorkflowReport } = require('./reportStore');
 const { isMcpConnected } = require('./mcpConnection');
 const { summarizeTrace } = require('../utils/trajectoryUtils');
+const { WORKFLOWS_PATH } = require('../config/paths');
 const { writeFileEnsuringDir } = require('../utils/fsUtils');
-
-const WORKFLOWS_PATH = path.join(__dirname, '../data/workflows.json');
 
 const STABILITY_RUNS = 2;
 

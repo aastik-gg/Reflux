@@ -4,10 +4,8 @@
  */
 
 const fs = require('fs');
-const path = require('path');
+const { MCPS_PATH } = require('../config/paths');
 const { writeFileEnsuringDir } = require('../utils/fsUtils');
-
-const MCPS_PATH = path.join(__dirname, '../data/mcps.json');
 
 /**
  * Load all registered tools.

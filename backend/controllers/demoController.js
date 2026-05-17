@@ -4,11 +4,8 @@
  */
 
 const fs = require('fs');
-const path = require('path');
 const { replaceTools } = require('../services/mcpRegistry');
-
-const BAD_PACK_PATH = path.join(__dirname, '../data/demo-bad-mcps.json');
-const FIXED_PACK_PATH = path.join(__dirname, '../data/demo-fixed-mcps.json');
+const { DEMO_BAD_PATH, DEMO_FIXED_PATH } = require('../config/paths');
 
 const DEMO_TASKS = {
   bad: 'Assign user_id 123 to the support queue',
@@ -28,7 +25,7 @@ function loadPack(filePath) {
  */
 async function loadBadPack(req, res) {
   try {
-    const tools = loadPack(BAD_PACK_PATH);
+    const tools = loadPack(DEMO_BAD_PATH);
     replaceTools(tools);
 
     return res.status(200).json({
@@ -57,7 +54,7 @@ async function loadBadPack(req, res) {
  */
 async function loadFixedPack(req, res) {
   try {
-    const tools = loadPack(FIXED_PACK_PATH);
+    const tools = loadPack(DEMO_FIXED_PATH);
     replaceTools(tools);
 
     return res.status(200).json({

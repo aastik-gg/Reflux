@@ -15,13 +15,19 @@ const demoRoutes = require('./routes/demoRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const { getLlmConfig } = require('./services/openaiService');
 const { ensureDir } = require('./utils/fsUtils');
+const {
+  IS_VERCEL,
+  GENERATED_DIR,
+  WRITABLE_DATA_DIR,
+  FIX_PATH,
+  ensureRuntimeDirs,
+} = require('./config/paths');
+
+ensureRuntimeDirs();
+ensureDir(GENERATED_DIR);
+ensureDir(path.join(WRITABLE_DATA_DIR, 'reports-archive'));
 
 const app = express();
-const GENERATED_DIR = path.join(__dirname, 'generated');
-const DATA_DIR = path.join(__dirname, 'data');
-
-ensureDir(GENERATED_DIR);
-ensureDir(path.join(DATA_DIR, 'reports-archive'));
 const PORT = process.env.PORT || 3000;
 const CORS_ORIGIN = process.env.CORS_ORIGIN || '*';
 
@@ -76,13 +82,14 @@ app.get('/health', (_req, res) => {
     llm_provider: llm.provider,
     llm_model: llm.model,
     llm_configured: llm.configured,
+    deployment: IS_VERCEL ? 'vercel' : 'local',
+    real_mcp_available: !IS_VERCEL,
   });
 });
 
 // Serve generated fix.md
 app.get('/api/report/fix', (_req, res) => {
-  const fixPath = path.join(__dirname, 'generated/fix.md');
-  res.sendFile(fixPath);
+  res.sendFile(FIX_PATH);
 });
 
 // 404 handler
@@ -112,30 +119,13 @@ app.use((err, _req, res, _next) => {
   res.status(500).json({ error: 'Internal server error', details: err.message });
 });
 
-app.listen(PORT, () => {
-  console.log(`MCP Reliability Tester running on http://localhost:${PORT}`);
-  console.log('Endpoints:');
-  console.log('  POST /api/mcp/connect          - Connect real MCP server (stdio)');
-  console.log('  POST /api/mcp/disconnect       - Disconnect MCP server');
-  console.log('  GET  /api/mcp/connection       - MCP connection status');
-  console.log('  POST /api/mcp/sync             - Sync tools from live MCP');
-  console.log('  POST /api/mcp/apply-optimized  - Apply optimized tools to registry');
-  console.log('  POST /api/mcp/upload           - Upload MCP tool definitions');
-  console.log('  POST /api/mcp/replace          - Replace entire MCP registry');
-  console.log('  GET  /api/mcp                  - List registered tools');
-  console.log('  POST /api/demo/load-bad  - Load bad demo MCP pack');
-  console.log('  POST /api/demo/load-fixed - Load fixed demo MCP pack');
-  console.log('  GET  /api/demo/info      - Demo pack info');
-  console.log('  POST /api/workflow/run     - Run AI workflow test');
-  console.log('  POST /api/workflow/compare   - Before/after score comparison');
-  console.log('  POST /api/workflow/suite     - Run test suite (multiple tasks)');
-  console.log('  GET  /api/workflow/suite/info - Suite pack info');
-  console.log('  GET  /api/traces         - Get all workflow traces');
-  console.log('  GET  /api/traces/latest  - Get latest trace');
-  console.log('  GET  /api/report/fix       - Latest fix.md (legacy)');
-  console.log('  GET  /api/reports          - List all reports');
-  console.log('  GET  /api/reports/:id      - Report by workflow ID');
-  console.log('  GET  /health             - Health check');
-});
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`MCP Reliability Tester running on http://localhost:${PORT}`);
+    if (IS_VERCEL) {
+      console.log('Note: Running on Vercel — real MCP (stdio) is disabled; use simulated mode.');
+    }
+  });
+}
 
 module.exports = app;

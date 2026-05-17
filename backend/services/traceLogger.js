@@ -6,9 +6,8 @@
 const fs = require('fs');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
+const { TRACES_PATH } = require('../config/paths');
 const { writeFileEnsuringDir } = require('../utils/fsUtils');
-
-const TRACES_PATH = path.join(__dirname, '../data/traces.json');
 
 /**
  * Read all traces from disk.

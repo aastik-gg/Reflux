@@ -8,6 +8,7 @@ const { Client } = require('@modelcontextprotocol/sdk/client');
 const { StdioClientTransport } = require('@modelcontextprotocol/sdk/client/stdio.js');
 const { mcpToolsToRegistry } = require('../utils/mcpSchemaConverter');
 const { replaceTools } = require('./mcpRegistry');
+const { IS_VERCEL } = require('../config/paths');
 
 let client = null;
 let transport = null;
@@ -43,6 +44,12 @@ const PRESETS = {
  * Connect to an MCP server subprocess.
  */
 async function connectMcpServer({ command, args = [], env, preset, importTools = true }) {
+  if (IS_VERCEL) {
+    throw new Error(
+      'Real MCP (stdio) is not supported on Vercel serverless. Use mode "simulated", or host the backend on Railway/Render/Fly.io for live MCP.'
+    );
+  }
+
   await disconnectMcpServer();
 
   let cmd = command;

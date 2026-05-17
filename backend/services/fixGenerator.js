@@ -3,13 +3,10 @@
  * Generates the MCP Optimization Report as markdown (generated/fix.md).
  */
 
-const path = require('path');
 const { textCompletion } = require('./openaiService');
 const { getNamingSuggestions } = require('./toolExecutor');
+const { FIX_PATH } = require('../config/paths');
 const { writeFileEnsuringDir } = require('../utils/fsUtils');
-
-const GENERATED_DIR = path.join(__dirname, '../generated');
-const FIX_PATH = path.join(GENERATED_DIR, 'fix.md');
 
 /**
  * Build example payloads for each tool.
@@ -197,5 +194,4 @@ module.exports = {
   renderMarkdown,
   buildExamplePayloads,
   FIX_PATH,
-  GENERATED_DIR,
 };

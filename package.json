@@ -1,0 +1,24 @@
+{
+  "name": "mcp-reliability-tester",
+  "private": true,
+  "version": "1.0.0",
+  "description": "MCP Reliability Tester — full-stack (Vercel)",
+  "scripts": {
+    "install:all": "npm install && npm install --prefix frontend",
+    "build": "npm run build --prefix frontend",
+    "vercel-build": "npm run install:all && npm run build",
+    "dev:backend": "npm run dev --prefix backend",
+    "dev:frontend": "npm run dev --prefix frontend"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.0",
+    "openai": "^4.67.0",
+    "uuid": "^10.0.0",
+    "zod": "^3.25.76"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

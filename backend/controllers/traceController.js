@@ -4,10 +4,8 @@
  */
 
 const fs = require('fs');
-const path = require('path');
+const { WORKFLOWS_PATH } = require('../config/paths');
 const { getTraces, getLatestTrace } = require('../services/traceLogger');
-
-const WORKFLOWS_PATH = path.join(__dirname, '../data/workflows.json');
 
 /**
  * GET /api/traces — return all workflow traces with issues and outcomes.

@@ -5,11 +5,8 @@
 
 const fs = require('fs');
 const path = require('path');
+const { REPORTS_PATH, REPORTS_ARCHIVE_DIR } = require('../config/paths');
 const { ensureDir, writeFileEnsuringDir } = require('../utils/fsUtils');
-
-const DATA_DIR = path.join(__dirname, '../data');
-const REPORTS_PATH = path.join(DATA_DIR, 'reports.json');
-const REPORTS_ARCHIVE_DIR = path.join(DATA_DIR, 'reports-archive');
 
 function ensureArchiveDir() {
   ensureDir(REPORTS_ARCHIVE_DIR);
