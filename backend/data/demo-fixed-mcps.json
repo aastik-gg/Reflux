@@ -1,0 +1,56 @@
+[
+  {
+    "name": "assign_user",
+    "description": "Assigns a user to a support queue by user ID and queue ID. Returns assignment confirmation with timestamp.",
+    "parameters": {
+      "user_id": "string",
+      "queue_id": "string"
+    },
+    "examples": [
+      {
+        "user_id": "123",
+        "queue_id": "support"
+      }
+    ]
+  },
+  {
+    "name": "get_user",
+    "description": "Retrieves user profile information by user ID. Returns name, email, and status.",
+    "parameters": {
+      "user_id": "string"
+    },
+    "examples": [
+      {
+        "user_id": "123"
+      }
+    ]
+  },
+  {
+    "name": "create_ticket",
+    "description": "Creates a new support ticket with a title and priority level. Returns the generated ticket ID.",
+    "parameters": {
+      "title": "string",
+      "priority": "string"
+    },
+    "examples": [
+      {
+        "title": "Login issue",
+        "priority": "high"
+      }
+    ]
+  },
+  {
+    "name": "update_status",
+    "description": "Updates the status of a ticket or task by reference ID. Use statuses like open, in_progress, or done.",
+    "parameters": {
+      "reference_id": "string",
+      "status": "string"
+    },
+    "examples": [
+      {
+        "reference_id": "TKT-123",
+        "status": "in_progress"
+      }
+    ]
+  }
+]

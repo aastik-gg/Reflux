@@ -1,0 +1,247 @@
+{
+  "info": {
+    "name": "MCP Reliability Tester",
+    "description": "Test the MCP Reliability Tester backend API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/health"
+      }
+    },
+    {
+      "name": "2. Demo Info",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/demo/info"
+      }
+    },
+    {
+      "name": "3. Load Bad Demo Pack",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": "{{baseUrl}}/api/demo/load-bad"
+      }
+    },
+    {
+      "name": "4. Run Workflow (after bad pack)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"task\": \"Assign user_id 123 to the support queue\"\n}"
+        },
+        "url": "{{baseUrl}}/api/workflow/run"
+      }
+    },
+    {
+      "name": "4b. Run Workflow (stress mode)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"task\": \"Assign user_id 123 to the support queue\",\n  \"stress\": true\n}"
+        },
+        "url": "{{baseUrl}}/api/workflow/run"
+      }
+    },
+    {
+      "name": "4c. Compare Before/After (auto-optimize)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"task\": \"Assign user_id 123 to the support queue\",\n  \"stress\": false,\n  \"apply_optimized\": false\n}"
+        },
+        "url": "{{baseUrl}}/api/workflow/compare"
+      }
+    },
+    {
+      "name": "5. Load Fixed Demo Pack",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": "{{baseUrl}}/api/demo/load-fixed"
+      }
+    },
+    {
+      "name": "6. Run Workflow (after fixed pack)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"task\": \"Assign user_id 123 to the support queue\"\n}"
+        },
+        "url": "{{baseUrl}}/api/workflow/run"
+      }
+    },
+    {
+      "name": "7. Replace MCP Registry",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"tools\": [\n    {\n      \"name\": \"assign_user\",\n      \"description\": \"Assigns user by user_id\",\n      \"parameters\": { \"user_id\": \"string\" },\n      \"examples\": [{ \"user_id\": \"123\" }]\n    }\n  ]\n}"
+        },
+        "url": "{{baseUrl}}/api/mcp/replace"
+      }
+    },
+    {
+      "name": "8. List MCP Tools",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/mcp"
+      }
+    },
+    {
+      "name": "9. Upload MCP Tools (merge)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"tools\": [\n    {\n      \"name\": \"assign_user\",\n      \"description\": \"Assigns user\",\n      \"parameters\": { \"uid\": \"string\" }\n    }\n  ]\n}"
+        },
+        "url": "{{baseUrl}}/api/mcp/upload"
+      }
+    },
+    {
+      "name": "10. Get All Traces",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/traces"
+      }
+    },
+    {
+      "name": "11. Get Fix Report (latest legacy)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/report/fix"
+      }
+    },
+    {
+      "name": "12. List All Reports",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/reports"
+      }
+    },
+    {
+      "name": "13. Get Report by Workflow ID",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/reports/{{workflow_id}}"
+      }
+    },
+    {
+      "name": "14. Connect Real MCP (ticket-demo)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"preset\": \"ticket-demo\",\n  \"import_tools\": true\n}"
+        },
+        "url": "{{baseUrl}}/api/mcp/connect"
+      }
+    },
+    {
+      "name": "14b. Connect server-everything (market MCP)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"preset\": \"server-everything\",\n  \"import_tools\": true\n}"
+        },
+        "url": "{{baseUrl}}/api/mcp/connect"
+      }
+    },
+    {
+      "name": "15. MCP Connection Status",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/mcp/connection"
+      }
+    },
+    {
+      "name": "16. Run Workflow (REAL MCP)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"task\": \"Assign user_id 123 to the support queue\",\n  \"mode\": \"real\"\n}"
+        },
+        "url": "{{baseUrl}}/api/workflow/run"
+      }
+    },
+    {
+      "name": "17. Apply Optimized Tools",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"use_last_workflow\": true\n}"
+        },
+        "url": "{{baseUrl}}/api/mcp/apply-optimized"
+      }
+    },
+    {
+      "name": "18. Run Test Suite",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"pack\": \"demo\",\n  \"mode\": \"simulated\"\n}"
+        },
+        "url": "{{baseUrl}}/api/workflow/suite"
+      }
+    },
+    {
+      "name": "19. Disconnect MCP",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": "{{baseUrl}}/api/mcp/disconnect"
+      }
+    }
+  ]
+}

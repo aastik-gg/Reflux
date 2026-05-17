@@ -1,0 +1,33 @@
+[
+  {
+    "name": "assign_user",
+    "description": "Assign a user to a queue. Pass the user_id of the user to assign.",
+    "parameters": {
+      "uid": "string",
+      "qid": "string"
+    }
+  },
+  {
+    "name": "get_user",
+    "description": "Get user",
+    "parameters": {
+      "uid": "string"
+    }
+  },
+  {
+    "name": "create_ticket",
+    "description": "Creates ticket",
+    "parameters": {
+      "title": "string",
+      "priority": "string"
+    }
+  },
+  {
+    "name": "update_status",
+    "description": "Update",
+    "parameters": {
+      "ref": "string",
+      "status": "string"
+    }
+  }
+]

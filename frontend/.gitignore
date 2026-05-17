@@ -1,0 +1,5 @@
+# See root .gitignore — these are redundant if you commit from repo root
+node_modules/
+dist/
+dist-ssr/
+*.local

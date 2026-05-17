@@ -1,0 +1,22 @@
+{
+  "name": "mcp-reliability-tester",
+  "version": "1.0.0",
+  "description": "AI-powered MCP Reliability Tester and Fix Generator",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "mcp:demo-server": "node mcp-servers/ticket-demo-server.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.0",
+    "openai": "^4.67.0",
+    "uuid": "^10.0.0",
+    "zod": "^3.25.76"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
