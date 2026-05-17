@@ -5,6 +5,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { writeFileEnsuringDir } = require('../utils/fsUtils');
 
 const MCPS_PATH = path.join(__dirname, '../data/mcps.json');
 
@@ -25,7 +26,7 @@ function loadTools() {
  * Replace entire registry with a new tool list.
  */
 function replaceTools(tools) {
-  fs.writeFileSync(MCPS_PATH, JSON.stringify(tools, null, 2), 'utf8');
+  writeFileEnsuringDir(MCPS_PATH, JSON.stringify(tools, null, 2));
   return tools;
 }
 

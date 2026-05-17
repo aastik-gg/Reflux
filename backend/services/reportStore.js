@@ -5,14 +5,14 @@
 
 const fs = require('fs');
 const path = require('path');
+const { ensureDir, writeFileEnsuringDir } = require('../utils/fsUtils');
 
-const REPORTS_PATH = path.join(__dirname, '../data/reports.json');
-const REPORTS_ARCHIVE_DIR = path.join(__dirname, '../data/reports-archive');
+const DATA_DIR = path.join(__dirname, '../data');
+const REPORTS_PATH = path.join(DATA_DIR, 'reports.json');
+const REPORTS_ARCHIVE_DIR = path.join(DATA_DIR, 'reports-archive');
 
 function ensureArchiveDir() {
-  if (!fs.existsSync(REPORTS_ARCHIVE_DIR)) {
-    fs.mkdirSync(REPORTS_ARCHIVE_DIR, { recursive: true });
-  }
+  ensureDir(REPORTS_ARCHIVE_DIR);
 }
 
 function readReportsIndex() {
@@ -24,7 +24,7 @@ function readReportsIndex() {
 }
 
 function writeReportsIndex(reports) {
-  fs.writeFileSync(REPORTS_PATH, JSON.stringify(reports, null, 2), 'utf8');
+  writeFileEnsuringDir(REPORTS_PATH, JSON.stringify(reports, null, 2));
 }
 
 /**
@@ -55,7 +55,7 @@ function saveWorkflowReport({
   };
 
   if (fixMarkdown) {
-    fs.writeFileSync(path.join(REPORTS_ARCHIVE_DIR, `${workflowId}.md`), fixMarkdown, 'utf8');
+    writeFileEnsuringDir(path.join(REPORTS_ARCHIVE_DIR, `${workflowId}.md`), fixMarkdown);
     entry.has_markdown = true;
   }
 

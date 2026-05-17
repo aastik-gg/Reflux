@@ -6,6 +6,7 @@
 const fs = require('fs');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
+const { writeFileEnsuringDir } = require('../utils/fsUtils');
 
 const TRACES_PATH = path.join(__dirname, '../data/traces.json');
 
@@ -25,7 +26,7 @@ function readTraces() {
  * Write traces array to disk.
  */
 function writeTraces(traces) {
-  fs.writeFileSync(TRACES_PATH, JSON.stringify(traces, null, 2), 'utf8');
+  writeFileEnsuringDir(TRACES_PATH, JSON.stringify(traces, null, 2));
 }
 
 /**

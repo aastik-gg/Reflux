@@ -14,8 +14,14 @@ const traceRoutes = require('./routes/traceRoutes');
 const demoRoutes = require('./routes/demoRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const { getLlmConfig } = require('./services/openaiService');
+const { ensureDir } = require('./utils/fsUtils');
 
 const app = express();
+const GENERATED_DIR = path.join(__dirname, 'generated');
+const DATA_DIR = path.join(__dirname, 'data');
+
+ensureDir(GENERATED_DIR);
+ensureDir(path.join(DATA_DIR, 'reports-archive'));
 const PORT = process.env.PORT || 3000;
 const CORS_ORIGIN = process.env.CORS_ORIGIN || '*';
 

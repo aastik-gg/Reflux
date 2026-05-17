@@ -17,6 +17,7 @@ const { loadTools, replaceTools } = require('./mcpRegistry');
 const { saveWorkflowReport } = require('./reportStore');
 const { isMcpConnected } = require('./mcpConnection');
 const { summarizeTrace } = require('../utils/trajectoryUtils');
+const { writeFileEnsuringDir } = require('../utils/fsUtils');
 
 const WORKFLOWS_PATH = path.join(__dirname, '../data/workflows.json');
 
@@ -45,7 +46,7 @@ function saveWorkflowRecord(record) {
     workflows = [];
   }
   workflows.push(record);
-  fs.writeFileSync(WORKFLOWS_PATH, JSON.stringify(workflows, null, 2), 'utf8');
+  writeFileEnsuringDir(WORKFLOWS_PATH, JSON.stringify(workflows, null, 2));
 }
 
 /**
