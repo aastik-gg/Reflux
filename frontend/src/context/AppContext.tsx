@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import type {
   HealthResponse,
@@ -80,7 +80,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     refreshAll();
   }, [refreshAll]);
 
+  const actionInFlight = useRef(false);
+
   const runAction = useCallback(async <T,>(label: string, fn: () => Promise<T>): Promise<T> => {
+    if (actionInFlight.current) throw new Error("Action already in progress");
+    actionInFlight.current = true;
     setActionLoading(label);
     setError(null);
     try {
@@ -93,6 +97,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setError(msg);
       throw e;
     } finally {
+      actionInFlight.current = false;
       setActionLoading(null);
     }
   }, [refreshMcp, refreshTraces]);
@@ -153,9 +158,13 @@ export function useSelectedWorkflow(): WorkflowRecord | null {
       id: lastRun.workflow_id,
       task: lastRun.summary.task,
       agent_readiness_score: lastRun.agent_readiness_score,
+      score_breakdown: lastRun.score_breakdown,
       issues_detected: lastRun.issues_detected,
       trace: lastRun.trace,
       workflow_success_rate: lastRun.workflow_success_rate,
+      mode: lastRun.mode,
+      task_completed_successfully: lastRun.task_completed_successfully,
+      duration_ms: lastRun.summary.duration_ms,
     };
   }
   return workflows.find((w) => w.id === selectedWorkflowId) ?? workflows[workflows.length - 1] ?? null;

@@ -19,11 +19,11 @@ export function GlassMetric({ label, value, sub, icon }: { label: string; value:
   return (
     <div className="rounded-xl md:rounded-2xl border border-white/[0.08] p-4 md:p-5 group hover:border-white/[0.14] transition-all" style={glassStyle}>
       <div className="flex items-center gap-1.5 mb-2 md:mb-3">
-        <span className="text-white/20">{icon}</span>
-        <span className="text-[10px] md:text-xs text-white/30 font-medium truncate">{label}</span>
+        <span className="text-white/50">{icon}</span>
+        <span className="text-[10px] md:text-xs text-white/60 font-medium truncate">{label}</span>
       </div>
-      <p className="text-xl md:text-2xl font-bold text-white/90 font-mono tracking-tight">{value}</p>
-      <p className="text-[10px] md:text-[11px] text-white/25 mt-0.5 font-mono">{sub}</p>
+      <p className="text-xl md:text-2xl font-bold text-white font-mono tracking-tight">{value}</p>
+      <p className="text-[10px] md:text-[11px] text-white/50 mt-0.5 font-mono">{sub}</p>
     </div>
   );
 }
@@ -53,11 +53,11 @@ export function RunRow({
     <div className="flex items-center justify-between py-2.5 md:py-3 px-3 md:px-4 rounded-xl border border-white/[0.04] hover:bg-white/[0.03] transition-colors cursor-pointer group">
       <div className="flex items-center gap-2.5 min-w-0">
         <StatusDot status={status} />
-        <span className="text-xs md:text-sm text-white/70 truncate">{name}</span>
+        <span className="text-xs md:text-sm text-white/80 truncate">{name}</span>
       </div>
       <div className="flex items-center gap-3 md:gap-6 text-[10px] md:text-xs font-mono shrink-0 ml-2">
-        <span className="text-white/30">{score}</span>
-        <span className="text-white/15 hidden sm:inline">{time}</span>
+        <span className="text-white/60">{score}</span>
+        <span className="text-white/40 hidden sm:inline">{time}</span>
       </div>
     </div>
   );
@@ -67,11 +67,11 @@ export function FailureCard({ tool, type, desc, time }: { tool: string; type: st
   return (
     <div className="p-3 md:p-4 rounded-xl border border-white/[0.04] hover:bg-white/[0.02] transition-colors">
       <div className="flex justify-between items-start mb-1.5">
-        <span className="font-mono text-[10px] md:text-[11px] text-red-300/60 bg-red-400/[0.06] border border-red-400/[0.08] px-1.5 py-0.5 rounded">{tool}</span>
-        <span className="text-[10px] text-white/15 font-mono">{time}</span>
+        <span className="font-mono text-[10px] md:text-[11px] text-red-300/80 bg-red-400/[0.08] border border-red-400/[0.12] px-1.5 py-0.5 rounded">{tool}</span>
+        <span className="text-[10px] text-white/40 font-mono">{time}</span>
       </div>
-      <p className="text-xs font-medium text-white/50 mb-0.5">{type}</p>
-      <p className="text-[11px] text-white/25 leading-relaxed">{desc}</p>
+      <p className="text-xs font-medium text-white/70 mb-0.5">{type}</p>
+      <p className="text-[11px] text-white/50 leading-relaxed">{desc}</p>
     </div>
   );
 }
@@ -80,11 +80,11 @@ export function ToolBar({ name, pct }: { name: string; pct: number }) {
   return (
     <div className="space-y-1.5">
       <div className="flex justify-between text-[11px]">
-        <span className="font-mono text-white/40">{name}</span>
-        <span className="font-mono text-white/20">{pct}%</span>
+        <span className="font-mono text-white/70">{name}</span>
+        <span className="font-mono text-white/50">{pct}%</span>
       </div>
-      <div className="h-1 rounded-full bg-white/[0.04] overflow-hidden">
-        <div className="h-full rounded-full bg-white/20 transition-all duration-700" style={{ width: `${pct}%` }} />
+      <div className="h-1 rounded-full bg-white/[0.06] overflow-hidden">
+        <div className="h-full rounded-full bg-white/40 transition-all duration-700" style={{ width: `${pct}%` }} />
       </div>
     </div>
   );
@@ -92,18 +92,18 @@ export function ToolBar({ name, pct }: { name: string; pct: number }) {
 
 export function TraceStep({ step, tool, status, latency }: { step: number; tool: string; status: TraceStepStatus; latency: string }) {
   const Icon = status === "success" ? CheckCircle2 : status === "fail" ? XCircle : RotateCcw;
-  const color = status === "success" ? "text-emerald-400/60" : status === "fail" ? "text-red-400/60" : "text-amber-400/60";
+  const color = status === "success" ? "text-emerald-400/80" : status === "fail" ? "text-red-400/80" : "text-amber-400/80";
   return (
     <div
       className="flex-shrink-0 rounded-xl border border-white/[0.08] px-3 md:px-4 py-2.5 md:py-3 min-w-[130px] md:min-w-[160px] hover:bg-white/[0.05] transition-colors cursor-pointer"
       style={{ backdropFilter: "blur(16px)", backgroundColor: "rgba(0,0,0,0.4)" }}
     >
       <div className="flex items-center gap-2 mb-1">
-        <span className="text-[10px] text-white/15 font-mono">Step {step}</span>
+        <span className="text-[10px] text-white/40 font-mono">Step {step}</span>
         <Icon className={`w-3 h-3 ${color}`} />
       </div>
-      <p className="font-mono text-[11px] md:text-xs text-white/50 truncate">{tool}</p>
-      <p className="font-mono text-[10px] text-white/15 mt-0.5">{latency}</p>
+      <p className="font-mono text-[11px] md:text-xs text-white/70 truncate">{tool}</p>
+      <p className="font-mono text-[10px] text-white/40 mt-0.5">{latency}</p>
     </div>
   );
 }
@@ -116,10 +116,10 @@ export function RecommendationCard({ title, desc }: { title: string; desc: strin
   return (
     <div className="p-3 md:p-4 rounded-xl border border-white/[0.04] hover:bg-white/[0.02] transition-colors">
       <div className="flex items-center gap-2 mb-1">
-        <GitBranch className="w-3 h-3 text-white/20" />
-        <p className="text-xs font-medium text-white/60">{title}</p>
+        <GitBranch className="w-3 h-3 text-white/50" />
+        <p className="text-xs font-medium text-white/80">{title}</p>
       </div>
-      <p className="text-[11px] text-white/25 leading-relaxed">{desc}</p>
+      <p className="text-[11px] text-white/55 leading-relaxed">{desc}</p>
     </div>
   );
 }
@@ -143,7 +143,7 @@ export function SecondaryButton({ children, onClick, disabled, className = "" }:
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg border border-white/[0.06] text-[11px] text-white/40 hover:bg-white/[0.04] transition-colors disabled:opacity-40 ${className}`}
+      className={`flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg border border-white/[0.08] text-[11px] text-white/60 hover:bg-white/[0.06] hover:text-white/80 transition-colors disabled:opacity-40 ${className}`}
     >
       {children}
     </button>

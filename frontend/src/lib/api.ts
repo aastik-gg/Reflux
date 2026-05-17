@@ -4,6 +4,9 @@ import type {
   HealthResponse,
   McpConnection,
   McpTool,
+  SuiteResult,
+  SuiteInfo,
+  ReportListItem,
   WorkflowRunResult,
 } from "@/types/api";
 
@@ -57,6 +60,18 @@ export const api = {
   syncMcp: () =>
     request<{ count: number; tools: McpTool[] }>("/api/mcp/sync", { method: "POST", body: "{}" }),
 
+  uploadTools: (tools: McpTool[]) =>
+    request<{ message: string; count: number; tools: McpTool[] }>("/api/mcp/upload", {
+      method: "POST",
+      body: JSON.stringify({ tools }),
+    }),
+
+  replaceTools: (tools: McpTool[]) =>
+    request<{ message: string; count: number; tools: McpTool[] }>("/api/mcp/replace", {
+      method: "POST",
+      body: JSON.stringify({ tools }),
+    }),
+
   applyOptimized: (body: { use_last_workflow?: boolean; workflow_id?: string }) =>
     request<{ message: string; count: number }>("/api/mcp/apply-optimized", {
       method: "POST",
@@ -84,11 +99,9 @@ export const api = {
     request<CompareResult>("/api/workflow/compare", { method: "POST", body: JSON.stringify(body) }),
 
   runSuite: (body: { pack?: string; mode?: string; stress?: boolean }) =>
-    request<{
-      average_agent_readiness_score: number;
-      results: { task: string; agent_readiness_score: number; workflow_id: string }[];
-      summary: string;
-    }>("/api/workflow/suite", { method: "POST", body: JSON.stringify(body) }),
+    request<SuiteResult>("/api/workflow/suite", { method: "POST", body: JSON.stringify(body) }),
+
+  getSuiteInfo: () => request<SuiteInfo>("/api/workflow/suite/info"),
 
   getTraces: () =>
     request<{
@@ -97,8 +110,17 @@ export const api = {
       workflows: import("@/types/api").WorkflowRecord[];
     }>("/api/traces"),
 
+  getLatestTrace: () =>
+    request<import("@/types/api").TraceSession>("/api/traces/latest"),
+
+  getReports: () =>
+    request<{ count: number; reports: ReportListItem[] }>("/api/reports"),
+
   getReport: (workflowId: string) =>
     request<{ workflow_id: string; fix_markdown: string | null; agent_readiness_score?: number }>(
       `/api/reports/${workflowId}`
     ),
+
+  getReportsList: () =>
+    request<{ count: number; reports: import("@/types/api").ReportListItem[] }>("/api/reports"),
 };
