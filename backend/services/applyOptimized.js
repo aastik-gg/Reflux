@@ -3,57 +3,12 @@
  * Apply optimized MCP tool definitions to the registry.
  */
 
-const fs = require('fs');
-const { WORKFLOWS_PATH } = require('../config/paths');
 const { replaceTools, loadTools } = require('./mcpRegistry');
 const { generateOptimizedTools } = require('./toolOptimizer');
 const { isMcpConnected, syncToolsFromMcp } = require('./mcpConnection');
+const { getWorkflowById, getLastWorkflowWithOptimized } = require('./workflowStore');
+const { sanitizeTools } = require('../utils/fsUtils');
 
-/**
- * Remove internal metadata fields before saving tools.
- */
-function stripToolMetadata(tools) {
-  return (tools || []).map((tool) => {
-    const clean = {
-      name: tool.name,
-      description: tool.description,
-      parameters: tool.parameters || {},
-    };
-    if (tool.examples) clean.examples = tool.examples;
-    return clean;
-  });
-}
-
-/**
- * Load workflow record by ID.
- */
-function getWorkflowById(workflowId) {
-  try {
-    const workflows = JSON.parse(fs.readFileSync(WORKFLOWS_PATH, 'utf8'));
-    return workflows.find((w) => w.id === workflowId);
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Get most recent workflow with optimized_tools.
- */
-function getLastWorkflowWithOptimized() {
-  try {
-    const workflows = JSON.parse(fs.readFileSync(WORKFLOWS_PATH, 'utf8'));
-    for (let i = workflows.length - 1; i >= 0; i--) {
-      if (workflows[i].optimized_tools?.length) return workflows[i];
-    }
-  } catch {
-    return null;
-  }
-  return null;
-}
-
-/**
- * Apply optimized tools to registry.
- */
 async function applyOptimizedTools({
   tools,
   workflowId,
@@ -72,9 +27,7 @@ async function applyOptimizedTools({
       optimized = record.optimized_tools;
     } else if (useLastWorkflow) {
       const record = getLastWorkflowWithOptimized();
-      if (!record) {
-        throw new Error('No recent workflow with optimized_tools found.');
-      }
+      if (!record) throw new Error('No recent workflow with optimized_tools found.');
       optimized = record.optimized_tools;
       workflowId = record.id;
     } else if (regenerateFromCurrent) {
@@ -83,13 +36,11 @@ async function applyOptimizedTools({
       const issues = detectAll({ trace: [], tools: current, runTraces: [] });
       optimized = generateOptimizedTools(current, issues);
     } else {
-      throw new Error(
-        'Provide "tools", "workflow_id", "use_last_workflow": true, or "regenerate_from_current": true'
-      );
+      throw new Error('Provide "tools", "workflow_id", "use_last_workflow", or "regenerate_from_current"');
     }
   }
 
-  const cleaned = stripToolMetadata(optimized);
+  const cleaned = sanitizeTools(optimized);
   replaceTools(cleaned);
 
   let realMcpSynced = false;
@@ -107,8 +58,4 @@ async function applyOptimizedTools({
   };
 }
 
-module.exports = {
-  applyOptimizedTools,
-  stripToolMetadata,
-  getWorkflowById,
-};
+module.exports = { applyOptimizedTools };

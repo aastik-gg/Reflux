@@ -1,15 +1,17 @@
 import { CheckCircle2, GitBranch, RotateCcw, XCircle } from "lucide-react";
+import { useLayoutEffect, useRef } from "react";
+import gsap from "gsap";
 import type { RunStatus, TraceStepStatus } from "@/types/api";
 
-const glassStyle: React.CSSProperties = {
-  backdropFilter: "blur(24px) saturate(1.4)",
-  WebkitBackdropFilter: "blur(24px) saturate(1.4)",
-  backgroundColor: "rgba(0,0,0,0.45)",
+const frost: React.CSSProperties = {
+  backdropFilter: "blur(16px) saturate(1.3)",
+  WebkitBackdropFilter: "blur(16px) saturate(1.3)",
+  backgroundColor: "rgba(0,0,0,0.55)",
 };
 
 export function GlassPanel({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={`rounded-xl md:rounded-2xl border border-white/[0.08] p-4 md:p-6 transition-colors hover:border-white/[0.14] ${className}`} style={glassStyle}>
+    <div className={`rounded-xl md:rounded-2xl border border-white/[0.08] p-4 md:p-6 transition-colors hover:border-white/[0.14] ${className}`} style={frost}>
       {children}
     </div>
   );
@@ -17,7 +19,7 @@ export function GlassPanel({ children, className = "" }: { children: React.React
 
 export function GlassMetric({ label, value, sub, icon }: { label: string; value: string; sub: string; icon: React.ReactNode }) {
   return (
-    <div className="rounded-xl md:rounded-2xl border border-white/[0.08] p-4 md:p-5 group hover:border-white/[0.14] transition-all" style={glassStyle}>
+    <div className="rounded-xl md:rounded-2xl border border-white/[0.08] p-4 md:p-5 group hover:border-white/[0.14] transition-all" style={frost}>
       <div className="flex items-center gap-1.5 mb-2 md:mb-3">
         <span className="text-white/50">{icon}</span>
         <span className="text-[10px] md:text-xs text-white/60 font-medium truncate">{label}</span>
@@ -38,17 +40,7 @@ export function StatusDot({ status }: { status: RunStatus }) {
   return <span className={`w-2 h-2 rounded-full ${c}`} />;
 }
 
-export function RunRow({
-  name,
-  status,
-  time,
-  score,
-}: {
-  name: string;
-  status: RunStatus;
-  time: string;
-  score: string;
-}) {
+export function RunRow({ name, status, time, score }: { name: string; status: RunStatus; time: string; score: string }) {
   return (
     <div className="flex items-center justify-between py-2.5 md:py-3 px-3 md:px-4 rounded-xl border border-white/[0.04] hover:bg-white/[0.03] transition-colors cursor-pointer group">
       <div className="flex items-center gap-2.5 min-w-0">
@@ -94,10 +86,7 @@ export function TraceStep({ step, tool, status, latency }: { step: number; tool:
   const Icon = status === "success" ? CheckCircle2 : status === "fail" ? XCircle : RotateCcw;
   const color = status === "success" ? "text-emerald-400/80" : status === "fail" ? "text-red-400/80" : "text-amber-400/80";
   return (
-    <div
-      className="flex-shrink-0 rounded-xl border border-white/[0.08] px-3 md:px-4 py-2.5 md:py-3 min-w-[130px] md:min-w-[160px] hover:bg-white/[0.05] transition-colors cursor-pointer"
-      style={{ backdropFilter: "blur(16px)", backgroundColor: "rgba(0,0,0,0.4)" }}
-    >
+    <div className="flex-shrink-0 rounded-xl border border-white/[0.08] px-3 md:px-4 py-2.5 md:py-3 min-w-[130px] md:min-w-[160px] hover:bg-white/[0.05] transition-colors cursor-pointer" style={frost}>
       <div className="flex items-center gap-2 mb-1">
         <span className="text-[10px] text-white/40 font-mono">Step {step}</span>
         <Icon className={`w-3 h-3 ${color}`} />
@@ -126,40 +115,52 @@ export function RecommendationCard({ title, desc }: { title: string; desc: strin
 
 export function PrimaryButton({ children, onClick, disabled, className = "" }: { children: React.ReactNode; onClick?: () => void; disabled?: boolean; className?: string }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className={`px-4 py-1.5 rounded-lg text-[13px] font-semibold bg-white text-black hover:bg-white/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${className}`}
-    >
-      {children}
-    </button>
+    <button type="button" onClick={onClick} disabled={disabled}
+      className={`flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-lg text-[13px] font-semibold bg-white text-black hover:bg-white/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${className}`}
+    >{children}</button>
   );
 }
 
 export function SecondaryButton({ children, onClick, disabled, className = "" }: { children: React.ReactNode; onClick?: () => void; disabled?: boolean; className?: string }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
+    <button type="button" onClick={onClick} disabled={disabled}
       className={`flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg border border-white/[0.08] text-[11px] text-white/60 hover:bg-white/[0.06] hover:text-white/80 transition-colors disabled:opacity-40 ${className}`}
-    >
-      {children}
-    </button>
+    >{children}</button>
   );
 }
 
 export function ModalOverlay({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
+  const backdropRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    const bd = backdropRef.current;
+    const pn = panelRef.current;
+    if (!bd || !pn) return;
+
+    gsap.set(bd, { opacity: 0 });
+    gsap.set(pn, { opacity: 0, scale: 0.96, y: 16 });
+
+    const tl = gsap.timeline();
+    tl.to(bd, { opacity: 1, duration: 0.2, ease: "power2.out" });
+    tl.to(pn, { opacity: 1, scale: 1, y: 0, duration: 0.35, ease: "power3.out" }, 0.05);
+
+    const kids = Array.from(pn.children) as HTMLElement[];
+    if (kids.length > 0) {
+      gsap.set(kids, { opacity: 0, y: 8 });
+      tl.to(kids, { opacity: 1, y: 0, duration: 0.3, stagger: 0.04, ease: "power2.out", clearProps: "all" }, 0.12);
+    }
+
+    return () => { tl.kill(); };
+  }, []);
+
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70" onClick={onClose}>
-      <div
+    <div ref={backdropRef} className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60" onClick={onClose}>
+      <div ref={panelRef}
         className="w-full max-w-lg rounded-2xl border border-white/[0.1] p-6 max-h-[90vh] overflow-y-auto"
-        style={glassStyle}
+        style={{ ...frost, backgroundColor: "rgba(0,0,0,0.7)" }}
         onClick={(e) => e.stopPropagation()}
-      >
-        {children}
-      </div>
+      >{children}</div>
     </div>
   );
 }

@@ -34,6 +34,15 @@ async function uploadTools(req, res) {
 
 async function replaceToolsHandler(req, res) {
   try {
+    if (!req.body || !Array.isArray(req.body.tools)) {
+      return res.status(400).json({ error: 'Validation failed', details: ['Request body must include a "tools" array.'] });
+    }
+
+    if (req.body.tools.length === 0) {
+      replaceTools([]);
+      return res.status(200).json({ message: 'All tools cleared', count: 0, tools: [] });
+    }
+
     const validation = validateMcpUpload(req.body);
     if (!validation.valid) {
       return res.status(400).json({ error: 'Validation failed', details: validation.errors });

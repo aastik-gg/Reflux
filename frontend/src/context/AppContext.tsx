@@ -22,6 +22,7 @@ interface AppState {
   loading: boolean;
   actionLoading: string | null;
   error: string | null;
+  toast: string | null;
   refreshAll: () => Promise<void>;
   refreshMcp: () => Promise<void>;
   refreshTraces: () => Promise<void>;
@@ -45,6 +46,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showToast = useCallback((msg: string) => {
+    setToast(msg);
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(null), 4000);
+  }, []);
 
   const refreshMcp = useCallback(async () => {
     const data = await api.getMcpTools();
@@ -91,6 +100,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const result = await fn();
       await refreshMcp();
       await refreshTraces();
+      const r = result as Record<string, unknown> | null;
+      const msg = typeof r?.message === "string" ? r.message
+        : typeof r?.count === "number" ? `Done — ${r.count} tools`
+        : label.replace(/…$/, "") + " complete";
+      showToast(msg);
       return result;
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Request failed";
@@ -100,7 +114,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       actionInFlight.current = false;
       setActionLoading(null);
     }
-  }, [refreshMcp, refreshTraces]);
+  }, [refreshMcp, refreshTraces, showToast]);
 
   const value = useMemo(
     () => ({
@@ -115,6 +129,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       loading,
       actionLoading,
       error,
+      toast,
       refreshAll,
       refreshMcp,
       refreshTraces,
@@ -135,6 +150,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       loading,
       actionLoading,
       error,
+      toast,
       refreshAll,
       refreshMcp,
       refreshTraces,

@@ -5,6 +5,7 @@
 
 require('dotenv').config();
 
+const fs = require('fs');
 const express = require('express');
 const path = require('path');
 
@@ -13,40 +14,57 @@ const workflowRoutes = require('./routes/workflowRoutes');
 const traceRoutes = require('./routes/traceRoutes');
 const demoRoutes = require('./routes/demoRoutes');
 const reportRoutes = require('./routes/reportRoutes');
-const { getLlmConfig } = require('./services/openaiService');
+const { getLlmConfig } = require('./services/llmService');
 const { ensureDir } = require('./utils/fsUtils');
+const { loadTools, replaceTools } = require('./services/mcpRegistry');
 const {
-  IS_VERCEL,
+  DATA_DIR,
   GENERATED_DIR,
-  WRITABLE_DATA_DIR,
-  FIX_PATH,
-  ensureRuntimeDirs,
+  DEMO_BAD_PATH,
 } = require('./config/paths');
 
-ensureRuntimeDirs();
 ensureDir(GENERATED_DIR);
-ensureDir(path.join(WRITABLE_DATA_DIR, 'reports-archive'));
+ensureDir(path.join(DATA_DIR, 'reports-archive'));
+
+if (loadTools().length === 0) {
+  try {
+    const raw = fs.readFileSync(DEMO_BAD_PATH, 'utf8');
+    const demoTools = JSON.parse(raw);
+    replaceTools(Array.isArray(demoTools) ? demoTools : demoTools.tools || []);
+    console.log(`Auto-loaded ${loadTools().length} demo tools (registry was empty)`);
+  } catch (err) {
+    console.error('Failed to auto-load demo tools:', err.message);
+  }
+}
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const CORS_ORIGIN = process.env.CORS_ORIGIN || '*';
 
-// CORS — enable frontend (Vite/React/etc.) to call this API
+const ALLOWED_ORIGINS = [
+  process.env.FRONTEND_URL,
+  process.env.FRONTEND_URL?.replace(/\/+$/, ''),
+  'http://localhost:5173',
+  'http://localhost:4173',
+  'http://localhost:3000',
+].filter((v, i, a) => v && a.indexOf(v) === i);
+
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', CORS_ORIGIN);
+  const origin = req.headers.origin;
+  if (origin && ALLOWED_ORIGINS.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+    res.header('Access-Control-Allow-Credentials', 'true');
+  }
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  if (req.method === 'OPTIONS') {
-    return res.sendStatus(204);
-  }
+  res.header('Access-Control-Max-Age', '86400');
+  if (req.method === 'OPTIONS') return res.sendStatus(204);
   next();
 });
 
-// Middleware — log to stderr so stdout stays clean for any subprocess use
 app.use(express.json({
   limit: '2mb',
   strict: true,
-  verify: (_req, res, buf) => {
+  verify: (_req, _res, buf) => {
     if (buf.length === 0) return;
     const start = buf.toString('utf8', 0, Math.min(buf.length, 20)).trim();
     if (start.startsWith('POST ') || start.startsWith('GET ') || start.startsWith('PUT ')) {
@@ -82,12 +100,11 @@ app.get('/health', (_req, res) => {
     llm_provider: llm.provider,
     llm_model: llm.model,
     llm_configured: llm.configured,
-    deployment: IS_VERCEL ? 'vercel' : 'local',
-    real_mcp_available: !IS_VERCEL,
   });
 });
 
 // Serve generated fix.md
+const { FIX_PATH } = require('./config/paths');
 app.get('/api/report/fix', (_req, res) => {
   res.sendFile(FIX_PATH);
 });
@@ -97,14 +114,12 @@ app.use((_req, res) => {
   res.status(404).json({ error: 'Not found' });
 });
 
-// JSON parse errors (invalid Postman body, etc.)
+// JSON parse errors
 app.use((err, _req, res, next) => {
   if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
     return res.status(400).json({
       error: 'Invalid JSON body',
-      details:
-        'Send valid JSON in the request body (Postman: Body → raw → JSON). ' +
-        (err.message || ''),
+      details: 'Send valid JSON in the request body. ' + (err.message || ''),
     });
   }
   if (err.status === 400 && err.expose) {
@@ -122,9 +137,6 @@ app.use((err, _req, res, _next) => {
 if (require.main === module) {
   app.listen(PORT, () => {
     console.log(`MCP Reliability Tester running on http://localhost:${PORT}`);
-    if (IS_VERCEL) {
-      console.log('Note: Running on Vercel — real MCP (stdio) is disabled; use simulated mode.');
-    }
   });
 }
 

@@ -1,176 +1,113 @@
-"use client"
+import { useEffect, useRef } from "react";
+import gsap from "gsap";
 
-import { useEffect, useRef } from "react"
-
-declare global {
-  interface Window {
-    THREE: any
-  }
+interface Line {
+  x: number;
+  y: number;
+  len: number;
+  angle: number;
+  speed: number;
+  alpha: number;
 }
 
 export function ShaderAnimation() {
-  const containerRef = useRef<HTMLDivElement>(null)
-  const sceneRef = useRef<{
-    camera: any
-    scene: any
-    renderer: any
-    uniforms: any
-    animationId: number | null
-  }>({
-    camera: null,
-    scene: null,
-    renderer: null,
-    uniforms: null,
-    animationId: null,
-  })
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
-    // Load Three.js dynamically
-    const script = document.createElement("script")
-    script.src = "https://cdnjs.cloudflare.com/ajax/libs/three.js/89/three.min.js"
-    script.onload = () => {
-      if (containerRef.current && window.THREE) {
-        initThreeJS()
-      }
-    }
-    document.head.appendChild(script)
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
 
-    return () => {
-      // Cleanup
-      if (sceneRef.current.animationId) {
-        cancelAnimationFrame(sceneRef.current.animationId)
-      }
-      if (sceneRef.current.renderer) {
-        sceneRef.current.renderer.dispose()
-      }
-      document.head.removeChild(script)
-    }
-  }, [])
+    let w = 0;
+    let h = 0;
 
-  const initThreeJS = () => {
-    if (!containerRef.current || !window.THREE) return
+    const resize = () => {
+      const dpr = Math.min(window.devicePixelRatio, 1.5);
+      w = window.innerWidth;
+      h = window.innerHeight;
+      canvas.width = w * dpr;
+      canvas.height = h * dpr;
+      canvas.style.width = `${w}px`;
+      canvas.style.height = `${h}px`;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    };
+    resize();
+    window.addEventListener("resize", resize);
 
-    const THREE = window.THREE
-    const container = containerRef.current
+    const cx = () => w / 2;
+    const cy = () => h / 2;
 
-    // Clear any existing content
-    container.innerHTML = ""
+    const spawn = (): Line => {
+      const edge = Math.floor(Math.random() * 4);
+      let x: number, y: number;
+      if (edge === 0) { x = Math.random() * w; y = -20; }
+      else if (edge === 1) { x = w + 20; y = Math.random() * h; }
+      else if (edge === 2) { x = Math.random() * w; y = h + 20; }
+      else { x = -20; y = Math.random() * h; }
+      return {
+        x, y,
+        len: 20 + Math.random() * 50,
+        angle: Math.atan2(cy() - y, cx() - x),
+        speed: 0.6 + Math.random() * 1.2,
+        alpha: 0.12 + Math.random() * 0.25,
+      };
+    };
 
-    // Initialize camera
-    const camera = new THREE.Camera()
-    camera.position.z = 1
+    const COUNT = 80;
+    const lines: Line[] = Array.from({ length: COUNT }, () => {
+      const l = spawn();
+      const t = Math.random() * 0.85;
+      l.x = l.x + (cx() - l.x) * t;
+      l.y = l.y + (cy() - l.y) * t;
+      l.angle = Math.atan2(cy() - l.y, cx() - l.x);
+      return l;
+    });
 
-    // Initialize scene
-    const scene = new THREE.Scene()
+    let frame = 0;
+    const draw = () => {
+      frame++;
+      if (frame % 2 !== 0) return;
 
-    // Create geometry
-    const geometry = new THREE.PlaneBufferGeometry(2, 2)
+      ctx.clearRect(0, 0, w, h);
+      const centerX = cx();
+      const centerY = cy();
+      for (const l of lines) {
+        l.x += Math.cos(l.angle) * l.speed;
+        l.y += Math.sin(l.angle) * l.speed;
+        l.angle = Math.atan2(centerY - l.y, centerX - l.x);
 
-    // Define uniforms
-    const uniforms = {
-      time: { type: "f", value: 1.0 },
-      resolution: { type: "v2", value: new THREE.Vector2() },
-    }
+        const dx = centerX - l.x;
+        const dy = centerY - l.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
 
-    // Vertex shader
-    const vertexShader = `
-      void main() {
-        gl_Position = vec4( position, 1.0 );
-      }
-    `
+        const deadZone = Math.min(w, h) * 0.18;
+        const fadeStart = deadZone + 80;
+        const fade = dist < deadZone ? 0 : dist < fadeStart ? (dist - deadZone) / (fadeStart - deadZone) : 1;
+        const a = l.alpha * fade;
 
-    // Fragment shader
-    const fragmentShader = `
-      #define TWO_PI 6.2831853072
-      #define PI 3.14159265359
+        if (a > 0.005) {
+          const ex = l.x + Math.cos(l.angle) * l.len;
+          const ey = l.y + Math.sin(l.angle) * l.len;
 
-      precision highp float;
-      uniform vec2 resolution;
-      uniform float time;
-        
-      float random (in float x) {
-          return fract(sin(x)*1e4);
-      }
-      float random (vec2 st) {
-          return fract(sin(dot(st.xy,
-                               vec2(12.9898,78.233)))*
-              43758.5453123);
-      }
-      
-      varying vec2 vUv;
-
-      void main(void) {
-        vec2 uv = (gl_FragCoord.xy * 2.0 - resolution.xy) / min(resolution.x, resolution.y);
-        
-        vec2 fMosaicScal = vec2(4.0, 2.0);
-        vec2 vScreenSize = vec2(256,256);
-        uv.x = floor(uv.x * vScreenSize.x / fMosaicScal.x) / (vScreenSize.x / fMosaicScal.x);
-        uv.y = floor(uv.y * vScreenSize.y / fMosaicScal.y) / (vScreenSize.y / fMosaicScal.y);       
-          
-        float t = time*0.06+random(uv.x)*0.4;
-        float lineWidth = 0.0008;
-
-        vec3 color = vec3(0.0);
-        for(int j = 0; j < 3; j++){
-          for(int i=0; i < 5; i++){
-            color[j] += lineWidth*float(i*i) / abs(fract(t - 0.01*float(j)+float(i)*0.01)*1.0 - length(uv));        
-          }
+          ctx.beginPath();
+          ctx.moveTo(l.x, l.y);
+          ctx.lineTo(ex, ey);
+          ctx.strokeStyle = `rgba(255,255,255,${a})`;
+          ctx.lineWidth = 1;
+          ctx.stroke();
         }
 
-        gl_FragColor = vec4(color[2],color[1],color[0],1.0);
+        if (dist < deadZone) Object.assign(l, spawn());
       }
-    `
+    };
 
-    // Create material
-    const material = new THREE.ShaderMaterial({
-      uniforms: uniforms,
-      vertexShader: vertexShader,
-      fragmentShader: fragmentShader,
-    })
+    gsap.ticker.add(draw);
+    return () => {
+      gsap.ticker.remove(draw);
+      window.removeEventListener("resize", resize);
+    };
+  }, []);
 
-    // Create mesh and add to scene
-    const mesh = new THREE.Mesh(geometry, material)
-    scene.add(mesh)
-
-    // Initialize renderer
-    const renderer = new THREE.WebGLRenderer()
-    renderer.setPixelRatio(window.devicePixelRatio)
-    container.appendChild(renderer.domElement)
-
-    // Store references
-    sceneRef.current = {
-      camera,
-      scene,
-      renderer,
-      uniforms,
-      animationId: null,
-    }
-
-    // Handle resize
-    const onWindowResize = () => {
-      const rect = container.getBoundingClientRect()
-      renderer.setSize(rect.width, rect.height)
-      uniforms.resolution.value.x = renderer.domElement.width
-      uniforms.resolution.value.y = renderer.domElement.height
-    }
-
-    onWindowResize()
-    window.addEventListener("resize", onWindowResize, false)
-
-    // Animation loop
-    const animate = () => {
-      sceneRef.current.animationId = requestAnimationFrame(animate)
-      uniforms.time.value += 0.05
-      renderer.render(scene, camera)
-    }
-
-    animate()
-  }
-
-  return (
-    <div
-      ref={containerRef}
-      className="w-full h-full absolute" 
-    />
-  )
+  return <canvas ref={canvasRef} className="w-full h-full absolute top-0 left-0" />;
 }

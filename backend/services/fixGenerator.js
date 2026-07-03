@@ -3,7 +3,7 @@
  * Generates the MCP Optimization Report as markdown (generated/fix.md).
  */
 
-const { textCompletion } = require('./openaiService');
+const { textCompletion } = require('./llmService');
 const { getNamingSuggestions } = require('./toolExecutor');
 const { FIX_PATH } = require('../config/paths');
 const { writeFileEnsuringDir } = require('../utils/fsUtils');
@@ -171,8 +171,8 @@ async function generateFixReport({ task, issues, evaluation, tools, trace, workf
   // Try to enrich with LLM-generated narrative sections
   try {
     const enhanced = await textCompletion({
-      systemPrompt: 'You are an MCP optimization expert. Add a concise executive summary (3-5 sentences) for an MCP optimization report. Return only the summary text, no markdown headers.',
-      userPrompt: `Issues: ${JSON.stringify(issues)}\nEvaluation: ${JSON.stringify(evaluation)}`,
+      systemPrompt: 'Write a 3-sentence executive summary for an MCP optimization report. Return only the summary text.',
+      userPrompt: JSON.stringify({ issues: issues.map(i => i.message), assessment: evaluation?.overall_assessment }),
     });
 
     if (enhanced && enhanced.length > 20) {
@@ -189,9 +189,4 @@ async function generateFixReport({ task, issues, evaluation, tools, trace, workf
   return markdown;
 }
 
-module.exports = {
-  generateFixReport,
-  renderMarkdown,
-  buildExamplePayloads,
-  FIX_PATH,
-};
+module.exports = { generateFixReport, renderMarkdown };

@@ -1,133 +1,74 @@
 /**
  * schemaUtils.js
- * Converts MCP tool definitions into OpenAI function-calling schemas.
+ * Converts MCP tool definitions into Gemini function declarations.
  */
 
-/**
- * Map a simple type string to JSON Schema type.
- */
-function mapType(typeStr) {
-  const t = String(typeStr).toLowerCase();
-  if (t === 'string') return 'string';
-  if (t === 'number' || t === 'integer') return 'number';
-  if (t === 'boolean') return 'boolean';
-  if (t === 'array') return 'array';
-  if (t === 'object') return 'object';
-  return 'string';
+const GEMINI_TYPE_MAP = {
+  string: 'STRING',
+  number: 'NUMBER',
+  integer: 'INTEGER',
+  boolean: 'BOOLEAN',
+  array: 'ARRAY',
+  object: 'OBJECT',
+};
+
+function toGeminiType(typeStr) {
+  return GEMINI_TYPE_MAP[String(typeStr).toLowerCase()] || 'STRING';
 }
 
 /**
- * Build JSON Schema properties from flat parameter map.
- * e.g. { uid: "string", count: "number" }
+ * Convert nested properties to Gemini schema format.
  */
-function buildProperties(parameters = {}) {
-  const properties = {};
-  const required = [];
-
-  for (const [key, value] of Object.entries(parameters)) {
+function convertProperties(props) {
+  if (!props || typeof props !== 'object') return undefined;
+  const out = {};
+  for (const [key, value] of Object.entries(props)) {
     if (typeof value === 'string') {
-      const type = mapType(value);
-      const prop = { type, description: `${key} (${value})` };
-      if (type === 'array') {
-        prop.items = { type: 'string' };
-      }
-      properties[key] = prop;
-      required.push(key);
+      out[key] = { type: toGeminiType(value), description: `${key} (${value})` };
     } else if (value && typeof value === 'object') {
-      const type = value.type ? mapType(value.type) : 'string';
-      properties[key] = {
-        type,
-        description: value.description || key,
-        ...(value.enum ? { enum: value.enum } : {}),
-        ...(type === 'array' ? { items: value.items || { type: 'string' } } : {}),
-      };
-      if (value.required !== false) required.push(key);
+      const type = toGeminiType(value.type || 'string');
+      out[key] = { type, description: value.description || key };
+      if (value.enum) out[key].enum = value.enum;
+      if (value.items) out[key].items = { type: toGeminiType(value.items.type || 'string') };
+      if (value.properties) out[key].properties = convertProperties(value.properties);
     }
   }
-
-  return { properties, required };
-}
-
-/**
- * Normalize MCP/JSON Schema for OpenAI function tools (requires array.items, etc.).
- */
-function sanitizeJsonSchemaForOpenAI(schema) {
-  if (!schema || typeof schema !== 'object') {
-    return { type: 'object', properties: {} };
-  }
-
-  if (Array.isArray(schema)) {
-    return schema.map(sanitizeJsonSchemaForOpenAI);
-  }
-
-  const out = { ...schema };
-  delete out.$schema;
-  delete out.$id;
-
-  if (out.type === 'array' && !out.items) {
-    out.items = { type: 'string' };
-  }
-
-  if (out.properties && typeof out.properties === 'object') {
-    const properties = {};
-    for (const [key, value] of Object.entries(out.properties)) {
-      properties[key] = sanitizeJsonSchemaForOpenAI(value);
-    }
-    out.properties = properties;
-  }
-
-  if (out.items) {
-    out.items = sanitizeJsonSchemaForOpenAI(out.items);
-  }
-
-  if (out.additionalProperties && typeof out.additionalProperties === 'object') {
-    out.additionalProperties = sanitizeJsonSchemaForOpenAI(out.additionalProperties);
-  }
-
-  for (const combiner of ['anyOf', 'oneOf', 'allOf']) {
-    if (Array.isArray(out[combiner])) {
-      out[combiner] = out[combiner].map(sanitizeJsonSchemaForOpenAI);
-    }
-  }
-
   return out;
 }
 
 /**
- * Convert a single MCP tool definition to OpenAI tool format.
+ * Convert a single MCP tool to a Gemini function declaration.
  */
-function mcpToolToOpenAI(tool) {
-  let parameters;
+function mcpToolToGemini(tool) {
+  const decl = {
+    name: tool.name,
+    description: tool.description || `Tool: ${tool.name}`,
+  };
 
-  if (tool.input_schema && typeof tool.input_schema === 'object') {
-    parameters = sanitizeJsonSchemaForOpenAI(tool.input_schema);
-    if (!parameters.type) {
-      parameters.type = 'object';
+  const params = tool.input_schema || tool.parameters;
+  if (params && typeof params === 'object') {
+    const props = params.properties || params;
+    const converted = convertProperties(props);
+    if (converted && Object.keys(converted).length > 0) {
+      decl.parameters = {
+        type: 'OBJECT',
+        properties: converted,
+      };
+      const required = params.required || Object.keys(props);
+      if (required.length > 0) decl.parameters.required = required;
     }
-  } else {
-    const { properties, required } = buildProperties(tool.parameters || {});
-    parameters = {
-      type: 'object',
-      properties,
-      required,
-    };
   }
 
-  return {
-    type: 'function',
-    function: {
-      name: tool.name,
-      description: tool.description || `Tool: ${tool.name}`,
-      parameters,
-    },
-  };
+  return decl;
 }
 
 /**
- * Convert an array of MCP tools to OpenAI tools array.
+ * Convert an array of MCP tools to Gemini tools format.
+ * Returns the tools array expected by Gemini: [{ functionDeclarations: [...] }]
  */
-function mcpToolsToOpenAI(tools) {
-  return (tools || []).map(mcpToolToOpenAI);
+function mcpToolsToGemini(tools) {
+  if (!tools || tools.length === 0) return undefined;
+  return [{ functionDeclarations: tools.map(mcpToolToGemini) }];
 }
 
 /**
@@ -140,10 +81,50 @@ function getExpectedParams(tool) {
   return Object.keys(tool.parameters || {});
 }
 
+/**
+ * Convert an MCP tool to OpenAI function tool format.
+ */
+function mcpToolToOpenAI(tool) {
+  const params = tool.input_schema || tool.parameters;
+  const schema = { type: 'object', properties: {}, required: [] };
+
+  if (params && typeof params === 'object') {
+    const props = params.properties || params;
+    for (const [key, value] of Object.entries(props)) {
+      if (typeof value === 'string') {
+        schema.properties[key] = { type: value, description: `${key} (${value})` };
+      } else if (value && typeof value === 'object') {
+        schema.properties[key] = {
+          type: value.type || 'string',
+          description: value.description || key,
+          ...(value.enum ? { enum: value.enum } : {}),
+          ...(value.items ? { items: value.items } : {}),
+        };
+      }
+    }
+    schema.required = params.required || Object.keys(schema.properties);
+  }
+
+  return {
+    type: 'function',
+    function: {
+      name: tool.name,
+      description: tool.description || `Tool: ${tool.name}`,
+      parameters: schema,
+    },
+  };
+}
+
+function mcpToolsToOpenAI(tools) {
+  if (!tools || tools.length === 0) return [];
+  return tools.map(mcpToolToOpenAI);
+}
+
 module.exports = {
-  mapType,
-  buildProperties,
-  sanitizeJsonSchemaForOpenAI,
+  toGeminiType,
+  convertProperties,
+  mcpToolToGemini,
+  mcpToolsToGemini,
   mcpToolToOpenAI,
   mcpToolsToOpenAI,
   getExpectedParams,

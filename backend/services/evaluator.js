@@ -3,29 +3,13 @@
  * LLM-based analysis of workflow traces to infer root causes and confusion points.
  */
 
-const { textCompletion } = require('./openaiService');
+const { textCompletion } = require('./llmService');
 
-const SYSTEM_PROMPT = `You are an expert MCP (Model Context Protocol) reliability analyst.
-You analyze workflow execution traces from autonomous AI agents using MCP tools.
-Your job is to identify where and why the AI agent struggled, focusing on:
-- parameter naming confusion
-- missing or weak documentation
-- retry behavior
-- inconsistent tool outputs
-- workflow design issues
-
-Respond in valid JSON only with this structure:
-{
-  "confusion_points": [{ "step": number, "tool": string, "why": string }],
-  "root_causes": [string],
-  "documentation_gaps": [string],
-  "parameter_confusion": [{ "tool": string, "confused_param": string, "expected_param": string }],
-  "retry_analysis": string,
-  "overall_assessment": string
-}`;
+const SYSTEM_PROMPT = `Analyze MCP tool workflow traces. Identify why the AI agent struggled. Respond in JSON only:
+{"confusion_points":[{"step":0,"tool":"","why":""}],"root_causes":[""],"documentation_gaps":[""],"parameter_confusion":[{"tool":"","confused_param":"","expected_param":""}],"retry_analysis":"","overall_assessment":""}`;
 
 /**
- * Analyze traces using OpenAI and merge with rule-based issues.
+ * Analyze traces using LLM and merge with rule-based issues.
  */
 async function evaluate({ task, trace, issues, tools }) {
   const payload = {
@@ -49,18 +33,18 @@ async function evaluate({ task, trace, issues, tools }) {
   try {
     const raw = await textCompletion({
       systemPrompt: SYSTEM_PROMPT,
-      userPrompt: `Analyze this MCP workflow test:\n\n${JSON.stringify(payload, null, 2)}`,
+      userPrompt: `Analyze:\n${JSON.stringify(payload)}`,
     });
 
     const jsonMatch = raw.match(/\{[\s\S]*\}/);
     const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : null;
 
     return {
-      source: 'openai',
+      source: 'llm',
       ...parsed,
     };
   } catch (err) {
-    // Fallback when OpenAI is unavailable or returns invalid JSON
+    // Fallback when LLM is unavailable or returns invalid JSON
     return {
       source: 'fallback',
       confusion_points: trace

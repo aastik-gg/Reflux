@@ -1,12 +1,8 @@
 import type {
   CompareResult,
-  DemoInfo,
   HealthResponse,
   McpConnection,
   McpTool,
-  SuiteResult,
-  SuiteInfo,
-  ReportListItem,
   WorkflowRunResult,
 } from "@/types/api";
 
@@ -46,20 +42,6 @@ export const api = {
   getMcpTools: () =>
     request<{ count: number; tools: McpTool[]; mcp_connection: McpConnection; registry_note?: string }>("/api/mcp"),
 
-  getConnection: () => request<McpConnection>("/api/mcp/connection"),
-
-  connectMcp: (body: { preset?: string; command?: string; args?: string[]; import_tools?: boolean }) =>
-    request<{ message: string; connection: McpConnection; tools_imported: number }>("/api/mcp/connect", {
-      method: "POST",
-      body: JSON.stringify(body),
-    }),
-
-  disconnectMcp: () =>
-    request<{ message: string; connection: McpConnection }>("/api/mcp/disconnect", { method: "POST", body: "{}" }),
-
-  syncMcp: () =>
-    request<{ count: number; tools: McpTool[] }>("/api/mcp/sync", { method: "POST", body: "{}" }),
-
   uploadTools: (tools: McpTool[]) =>
     request<{ message: string; count: number; tools: McpTool[] }>("/api/mcp/upload", {
       method: "POST",
@@ -77,8 +59,6 @@ export const api = {
       method: "POST",
       body: JSON.stringify(body),
     }),
-
-  getDemoInfo: () => request<DemoInfo>("/api/demo/info"),
 
   loadBadDemo: () =>
     request<{ message: string; count: number; suggested_tasks: { simple: string; multi_step: string } }>(
@@ -98,11 +78,6 @@ export const api = {
   compareWorkflow: (body: { task: string; mode?: string; stress?: boolean; apply_optimized?: boolean }) =>
     request<CompareResult>("/api/workflow/compare", { method: "POST", body: JSON.stringify(body) }),
 
-  runSuite: (body: { pack?: string; mode?: string; stress?: boolean }) =>
-    request<SuiteResult>("/api/workflow/suite", { method: "POST", body: JSON.stringify(body) }),
-
-  getSuiteInfo: () => request<SuiteInfo>("/api/workflow/suite/info"),
-
   getTraces: () =>
     request<{
       count: number;
@@ -110,17 +85,9 @@ export const api = {
       workflows: import("@/types/api").WorkflowRecord[];
     }>("/api/traces"),
 
-  getLatestTrace: () =>
-    request<import("@/types/api").TraceSession>("/api/traces/latest"),
-
-  getReports: () =>
-    request<{ count: number; reports: ReportListItem[] }>("/api/reports"),
-
   getReport: (workflowId: string) =>
     request<{ workflow_id: string; fix_markdown: string | null; agent_readiness_score?: number }>(
       `/api/reports/${workflowId}`
     ),
 
-  getReportsList: () =>
-    request<{ count: number; reports: import("@/types/api").ReportListItem[] }>("/api/reports"),
 };

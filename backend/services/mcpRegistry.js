@@ -3,34 +3,19 @@
  * Read/write MCP tool definitions in data/mcps.json.
  */
 
-const fs = require('fs');
 const { MCPS_PATH } = require('../config/paths');
-const { writeFileEnsuringDir } = require('../utils/fsUtils');
+const { loadJsonFile, saveJsonFile } = require('../utils/fsUtils');
 
-/**
- * Load all registered tools.
- */
 function loadTools() {
-  try {
-    const raw = fs.readFileSync(MCPS_PATH, 'utf8');
-    const data = JSON.parse(raw);
-    return Array.isArray(data) ? data : data.tools || [];
-  } catch {
-    return [];
-  }
+  const data = loadJsonFile(MCPS_PATH, []);
+  return Array.isArray(data) ? data : data.tools || [];
 }
 
-/**
- * Replace entire registry with a new tool list.
- */
 function replaceTools(tools) {
-  writeFileEnsuringDir(MCPS_PATH, JSON.stringify(tools, null, 2));
+  saveJsonFile(MCPS_PATH, tools);
   return tools;
 }
 
-/**
- * Merge uploaded tools into registry (replace by name).
- */
 function mergeTools(newTools) {
   const toolMap = new Map(loadTools().map((t) => [t.name, t]));
   newTools.forEach((t) => toolMap.set(t.name, t));
@@ -39,9 +24,4 @@ function mergeTools(newTools) {
   return merged;
 }
 
-module.exports = {
-  MCPS_PATH,
-  loadTools,
-  replaceTools,
-  mergeTools,
-};
+module.exports = { MCPS_PATH, loadTools, replaceTools, mergeTools };

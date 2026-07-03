@@ -43,8 +43,10 @@ export function NewTestModal({ open, onClose, onComplete }: { open: boolean; onC
     setRunning(true);
     try {
       const result = await runAction("Running test…", () => api.runWorkflow({ task, mode, stress }));
-      setLastRun(result);
+      // Set these AFTER runAction (which refreshes traces/workflows internally)
+      // so the dashboard can display the full result object
       setSelectedWorkflowId(result.workflow_id);
+      setLastRun(result);
       onComplete?.();
       onClose();
     } catch {

@@ -138,15 +138,24 @@ function detectWeakDocumentation(tools) {
     const desc = tool.description || '';
     const hasExamples = tool.examples && tool.examples.length > 0;
     const paramCount = Object.keys(tool.parameters || {}).length;
+    const isVeryShort = desc.length < 20;
+    const isShort = desc.length < 40;
+    const missingExamples = !hasExamples && paramCount > 0;
 
-    if (desc.length < 40 || (!hasExamples && paramCount > 0)) {
+    if (isVeryShort) {
       issues.push({
         type: 'weak_documentation',
-        severity: 'low',
+        severity: 'high',
         tool: tool.name,
-        message: `Tool "${tool.name}" has insufficient documentation (description length: ${desc.length}, examples: ${hasExamples ? 'yes' : 'no'}).`,
-        description_length: desc.length,
-        has_examples: hasExamples,
+        message: `Tool "${tool.name}" has a near-empty description ("${desc}"). Agents will guess what it does.`,
+        suggested_fix: 'Write a clear description explaining what the tool does, its parameters, and when to use it.',
+      });
+    } else if (isShort || missingExamples) {
+      issues.push({
+        type: 'weak_documentation',
+        severity: 'medium',
+        tool: tool.name,
+        message: `Tool "${tool.name}" has weak documentation (${desc.length} chars, examples: ${hasExamples ? 'yes' : 'no'}).`,
         suggested_fix: 'Expand description with use cases, expected inputs/outputs, and at least one example payload.',
       });
     }

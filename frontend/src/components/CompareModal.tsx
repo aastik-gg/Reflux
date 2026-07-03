@@ -54,7 +54,7 @@ export function CompareModal({ result, onClose }: { result: CompareResult; onClo
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70" onClick={onClose}>
       <div
         className="w-full max-w-2xl rounded-2xl border border-white/[0.1] p-6 md:p-8 max-h-[90vh] overflow-y-auto"
-        style={{ backdropFilter: "blur(24px) saturate(1.4)", WebkitBackdropFilter: "blur(24px) saturate(1.4)", backgroundColor: "rgba(0,0,0,0.45)" }}
+        style={{ backdropFilter: "blur(16px) saturate(1.3)", WebkitBackdropFilter: "blur(16px) saturate(1.3)", backgroundColor: "rgba(0,0,0,0.7)" }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-6">

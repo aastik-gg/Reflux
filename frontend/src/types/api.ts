@@ -128,32 +128,3 @@ export interface HealthResponse {
   llm_model?: string;
 }
 
-export interface DemoInfo {
-  packs: { bad: { name: string }; fixed: { name: string } };
-  demo_flow?: string[];
-}
-
-export interface SuiteResult {
-  suite_id: string;
-  pack: string;
-  mode: string;
-  stress: boolean;
-  tasks_run: number;
-  average_agent_readiness_score: number;
-  total_issues_detected: number;
-  results: { id: string; task: string; workflow_id: string; agent_readiness_score: number; workflow_success_rate: number; task_completed: boolean; issues_count: number }[];
-  summary: string;
-  available_packs?: string[];
-}
-
-export interface SuiteInfo {
-  packs: Record<string, { id: string; task: string }[]>;
-  usage: string;
-}
-
-export interface ReportListItem {
-  workflow_id: string;
-  task: string;
-  agent_readiness_score?: number;
-  created_at?: string;
-}

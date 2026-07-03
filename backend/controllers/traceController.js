@@ -3,24 +3,13 @@
  * Handles trace retrieval endpoints.
  */
 
-const fs = require('fs');
-const { WORKFLOWS_PATH } = require('../config/paths');
 const { getTraces, getLatestTrace } = require('../services/traceLogger');
+const { loadWorkflows } = require('../services/workflowStore');
 
-/**
- * GET /api/traces — return all workflow traces with issues and outcomes.
- */
 async function getAllTraces(req, res) {
   try {
     const { workflow_id: workflowId } = req.query;
     const traces = getTraces(workflowId || null);
-
-    let workflows = [];
-    try {
-      workflows = JSON.parse(fs.readFileSync(WORKFLOWS_PATH, 'utf8'));
-    } catch {
-      workflows = [];
-    }
 
     return res.json({
       count: traces.length,
@@ -34,7 +23,7 @@ async function getAllTraces(req, res) {
         issues: t.issues,
         steps: t.steps,
       })),
-      workflows,
+      workflows: loadWorkflows(),
     });
   } catch (err) {
     console.error('[traceController.getAllTraces]', err);
@@ -42,10 +31,7 @@ async function getAllTraces(req, res) {
   }
 }
 
-/**
- * GET /api/traces/latest — return the most recent trace session.
- */
-async function getLatest(req, res) {
+async function getLatest(_req, res) {
   try {
     const latest = getLatestTrace();
     if (!latest) {
@@ -57,7 +43,4 @@ async function getLatest(req, res) {
   }
 }
 
-module.exports = {
-  getAllTraces,
-  getLatest,
-};
+module.exports = { getAllTraces, getLatest };

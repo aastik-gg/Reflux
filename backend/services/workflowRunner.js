@@ -3,8 +3,6 @@
  * Orchestrates workflow testing, compare runs, and stability checks.
  */
 
-const fs = require('fs');
-const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 const { runAgent } = require('./agentRunner');
 const { createSession, saveSession } = require('./traceLogger');
@@ -15,46 +13,16 @@ const { calculateReadinessScore } = require('./readinessScore');
 const { generateOptimizedTools } = require('./toolOptimizer');
 const { loadTools, replaceTools } = require('./mcpRegistry');
 const { saveWorkflowReport } = require('./reportStore');
+const { saveWorkflow } = require('./workflowStore');
 const { isMcpConnected } = require('./mcpConnection');
 const { summarizeTrace } = require('../utils/trajectoryUtils');
-const { WORKFLOWS_PATH } = require('../config/paths');
-const { writeFileEnsuringDir } = require('../utils/fsUtils');
+const { sanitizeTools } = require('../utils/fsUtils');
 
 const STABILITY_RUNS = 2;
 
-/**
- * Strip internal metadata before using tools in agent/executor.
- */
-function sanitizeToolsForRun(tools) {
-  return (tools || []).map(({ name, description, parameters, examples }) => ({
-    name,
-    description,
-    parameters: parameters || {},
-    ...(examples ? { examples } : {}),
-  }));
-}
-
-/**
- * Persist workflow result metadata.
- */
-function saveWorkflowRecord(record) {
-  let workflows = [];
-  try {
-    workflows = JSON.parse(fs.readFileSync(WORKFLOWS_PATH, 'utf8'));
-  } catch {
-    workflows = [];
-  }
-  workflows.push(record);
-  writeFileEnsuringDir(WORKFLOWS_PATH, JSON.stringify(workflows, null, 2));
-}
-
-/**
- * Build a compact result object from pipeline output.
- */
 function buildWorkflowResult({
   workflowId,
   task,
-  tools,
   trace,
   issues,
   readiness,
@@ -66,7 +34,7 @@ function buildWorkflowResult({
   fixMarkdown,
   stress,
   phase,
-  mode = 'simulated',
+  mode,
   primaryResult,
 }) {
   const traceSummary = summarizeTrace(trace);
@@ -111,24 +79,8 @@ function buildWorkflowResult({
     trace,
     evaluation,
     fix_markdown: fixMarkdown,
-    report_url:
-      fixMarkdown && (phase === 'before' || !phase || phase === 'single')
-        ? `/api/reports/${workflowId}`
-        : null,
-    apply_optimized_hint:
-      'POST /api/mcp/replace with body { "tools": <optimized_tools> } or POST /api/workflow/compare',
+    report_url: fixMarkdown ? `/api/reports/${workflowId}` : null,
   };
-}
-
-/**
- * Core pipeline: agent run → detect → score → optimize → report.
- */
-function assertExecutionMode(mode) {
-  if (mode === 'real' && !isMcpConnected()) {
-    throw new Error(
-      'mode "real" requires an active MCP connection. POST /api/mcp/connect with preset "ticket-demo" first.'
-    );
-  }
 }
 
 async function executeWorkflowPipeline({
@@ -141,21 +93,18 @@ async function executeWorkflowPipeline({
   runStability = true,
   phase = 'single',
 }) {
-  assertExecutionMode(mode);
+  if (mode === 'real' && !isMcpConnected()) {
+    throw new Error('mode "real" requires an active MCP connection. POST /api/mcp/connect first.');
+  }
+
   const workflowId = uuidv4();
-  const cleanTools = sanitizeToolsForRun(tools);
+  const cleanTools = sanitizeTools(tools);
   const runStartedAt = Date.now();
 
   const session = createSession({ task, workflowId, runType: 'primary' });
   const runTraces = [];
 
-  const primaryResult = await runAgent({
-    task,
-    tools: cleanTools,
-    session,
-    stress,
-    mode,
-  });
+  const primaryResult = await runAgent({ task, tools: cleanTools, session, stress, mode });
   primaryResult.mode = mode;
   runTraces.push(primaryResult.steps);
 
@@ -166,111 +115,56 @@ async function executeWorkflowPipeline({
         workflowId: `${workflowId}-stability-${i}`,
         runType: 'stability',
       });
-      const stabilityResult = await runAgent({
-        task,
-        tools: cleanTools,
-        session: stabilitySession,
-        stress,
-        mode,
-      });
+      const stabilityResult = await runAgent({ task, tools: cleanTools, session: stabilitySession, stress, mode });
       runTraces.push(stabilityResult.steps);
-      // Not persisted — in-memory only for instability detection
     }
   }
 
   const trace = session.steps;
   const issues = detectAll({ trace, tools: cleanTools, runTraces });
   const evaluation = await evaluate({ task, trace, issues, tools: cleanTools });
-
   const workflowSuccessRate = primaryResult.successRate;
-  const readiness = calculateReadinessScore({
-    trace,
-    issues,
-    workflowSuccessRate,
-    runTraces,
-  });
-
+  const readiness = calculateReadinessScore({ trace, issues, workflowSuccessRate, runTraces });
   const optimizedTools = generateOptimizedTools(cleanTools, issues);
   const outcome = primaryResult.workflowSuccess ? 'success' : 'failure';
   const durationMs = Date.now() - runStartedAt;
 
   let fixMarkdown = null;
   if (generateReport) {
-    fixMarkdown = await generateFixReport({
-      task,
-      issues,
-      evaluation,
-      tools: cleanTools,
-      trace,
-      workflowSuccessRate,
-    });
+    fixMarkdown = await generateFixReport({ task, issues, evaluation, tools: cleanTools, trace, workflowSuccessRate });
   }
 
   saveSession(session, { outcome, issues, persist: persistTrace });
 
   const result = buildWorkflowResult({
-    workflowId,
-    task,
-    tools: cleanTools,
-    trace,
-    issues,
-    readiness,
-    workflowSuccessRate,
-    outcome,
-    durationMs,
-    optimizedTools,
-    evaluation,
-    fixMarkdown,
-    stress,
-    phase,
-    mode,
-    primaryResult,
+    workflowId, task, trace, issues, readiness, workflowSuccessRate,
+    outcome, durationMs, optimizedTools, evaluation, fixMarkdown, stress, phase, mode, primaryResult,
   });
 
   if (generateReport && fixMarkdown) {
     saveWorkflowReport({
-      workflowId,
-      task,
-      fixMarkdown,
+      workflowId, task, fixMarkdown,
       agentReadinessScore: readiness.agent_readiness_score,
-      workflowSuccessRate,
-      issuesCount: issues.length,
-      stress,
-      phase,
+      workflowSuccessRate, issuesCount: issues.length, stress, phase,
     });
   }
 
   return result;
 }
 
-/**
- * POST /api/workflow/run
- */
 async function runWorkflow({ task, stress = false, mode = 'simulated' }) {
   const tools = loadTools();
-
   if (tools.length === 0) {
-    throw new Error(
-      'No MCP tools registered. Use POST /api/mcp/upload, POST /api/mcp/replace, POST /api/demo/load-bad, or POST /api/mcp/connect'
-    );
+    throw new Error('No MCP tools registered. Use POST /api/demo/load-bad or POST /api/mcp/upload');
   }
 
   const result = await executeWorkflowPipeline({
-    task,
-    tools,
-    stress,
-    mode,
-    persistTrace: true,
-    generateReport: true,
-    runStability: true,
-    phase: 'single',
+    task, tools, stress, mode,
+    persistTrace: true, generateReport: true, runStability: true, phase: 'single',
   });
 
-  saveWorkflowRecord({
-    id: result.workflow_id,
-    task,
-    stress: result.stress,
-    mode: result.mode,
+  saveWorkflow({
+    id: result.workflow_id, task, stress: result.stress, mode: result.mode,
     task_completed: result.task_completed,
     task_completed_successfully: result.task_completed_successfully,
     agent_readiness_score: result.agent_readiness_score,
@@ -285,17 +179,8 @@ async function runWorkflow({ task, stress = false, mode = 'simulated' }) {
   return result;
 }
 
-/**
- * POST /api/workflow/compare — run before (current tools) and after (optimized tools).
- */
-async function compareWorkflow({
-  task,
-  stress = false,
-  mode = 'simulated',
-  applyOptimized = false,
-}) {
+async function compareWorkflow({ task, stress = false, mode = 'simulated', applyOptimized = false }) {
   const tools = loadTools();
-
   if (tools.length === 0) {
     throw new Error('No MCP tools registered. Load tools before running compare.');
   }
@@ -303,52 +188,30 @@ async function compareWorkflow({
   const compareId = uuidv4();
 
   const before = await executeWorkflowPipeline({
-    task,
-    tools,
-    stress,
-    mode,
-    persistTrace: true,
-    generateReport: true,
-    runStability: true,
-    phase: 'before',
+    task, tools, stress, mode,
+    persistTrace: true, generateReport: true, runStability: true, phase: 'before',
   });
 
-  const optimizedTools = sanitizeToolsForRun(before.optimized_tools);
+  const optimizedTools = sanitizeTools(before.optimized_tools);
 
   const after = await executeWorkflowPipeline({
-    task,
-    tools: optimizedTools,
-    stress,
-    mode,
-    persistTrace: true,
-    generateReport: false,
-    runStability: true,
-    phase: 'after',
+    task, tools: optimizedTools, stress, mode,
+    persistTrace: true, generateReport: false, runStability: true, phase: 'after',
   });
 
-  if (applyOptimized) {
-    replaceTools(optimizedTools);
-  }
+  if (applyOptimized) replaceTools(optimizedTools);
 
-  const improvement =
-    after.agent_readiness_score - before.agent_readiness_score;
+  const improvement = after.agent_readiness_score - before.agent_readiness_score;
 
-  saveWorkflowRecord({
-    id: compareId,
-    type: 'compare',
-    task,
-    stress,
+  saveWorkflow({
+    id: compareId, type: 'compare', task, stress,
     before_score: before.agent_readiness_score,
     after_score: after.agent_readiness_score,
     improvement,
   });
 
   return {
-    compare_id: compareId,
-    task,
-    stress,
-    mode,
-    improvement,
+    compare_id: compareId, task, stress, mode, improvement,
     improvement_percent: before.agent_readiness_score
       ? Math.round((improvement / before.agent_readiness_score) * 100)
       : improvement,
@@ -356,18 +219,14 @@ async function compareWorkflow({
       workflow_id: before.workflow_id,
       agent_readiness_score: before.agent_readiness_score,
       score_breakdown: before.score_breakdown,
-      summary: before.summary,
-      issues: before.issues,
-      trace: before.trace,
+      summary: before.summary, issues: before.issues, trace: before.trace,
       optimized_tools: before.optimized_tools,
     },
     after: {
       workflow_id: after.workflow_id,
       agent_readiness_score: after.agent_readiness_score,
       score_breakdown: after.score_breakdown,
-      summary: after.summary,
-      issues: after.issues,
-      trace: after.trace,
+      summary: after.summary, issues: after.issues, trace: after.trace,
     },
     optimized_tools: optimizedTools,
     registry_updated: applyOptimized,
@@ -375,9 +234,4 @@ async function compareWorkflow({
   };
 }
 
-module.exports = {
-  runWorkflow,
-  compareWorkflow,
-  executeWorkflowPipeline,
-  loadTools,
-};
+module.exports = { runWorkflow, compareWorkflow, executeWorkflowPipeline };

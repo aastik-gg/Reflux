@@ -6,38 +6,13 @@
 const fs = require('fs');
 const path = require('path');
 const { REPORTS_PATH, REPORTS_ARCHIVE_DIR } = require('../config/paths');
-const { ensureDir, writeFileEnsuringDir } = require('../utils/fsUtils');
+const { ensureDir, loadJsonFile, saveJsonFile, writeFileEnsuringDir } = require('../utils/fsUtils');
 
-function ensureArchiveDir() {
-  ensureDir(REPORTS_ARCHIVE_DIR);
-}
-
-function readReportsIndex() {
-  try {
-    return JSON.parse(fs.readFileSync(REPORTS_PATH, 'utf8'));
-  } catch {
-    return [];
-  }
-}
-
-function writeReportsIndex(reports) {
-  writeFileEnsuringDir(REPORTS_PATH, JSON.stringify(reports, null, 2));
-}
-
-/**
- * Save report for a workflow run.
- */
 function saveWorkflowReport({
-  workflowId,
-  task,
-  fixMarkdown,
-  agentReadinessScore,
-  workflowSuccessRate,
-  issuesCount,
-  stress = false,
-  phase = 'single',
+  workflowId, task, fixMarkdown, agentReadinessScore,
+  workflowSuccessRate, issuesCount, stress = false, phase = 'single',
 }) {
-  ensureArchiveDir();
+  ensureDir(REPORTS_ARCHIVE_DIR);
 
   const entry = {
     workflow_id: workflowId,
@@ -46,8 +21,7 @@ function saveWorkflowReport({
     agent_readiness_score: agentReadinessScore,
     workflow_success_rate: workflowSuccessRate,
     issues_count: issuesCount,
-    stress,
-    phase,
+    stress, phase,
     report_url: `/api/reports/${workflowId}`,
   };
 
@@ -56,41 +30,25 @@ function saveWorkflowReport({
     entry.has_markdown = true;
   }
 
-  const reports = readReportsIndex().filter((r) => r.workflow_id !== workflowId);
+  const reports = loadJsonFile(REPORTS_PATH, []).filter((r) => r.workflow_id !== workflowId);
   reports.push(entry);
-  writeReportsIndex(reports);
-
+  saveJsonFile(REPORTS_PATH, reports);
   return entry;
 }
 
-/**
- * List reports (metadata only, no markdown body).
- */
 function listReports() {
-  return readReportsIndex();
+  return loadJsonFile(REPORTS_PATH, []);
 }
 
-/**
- * Get full report by workflow ID.
- */
 function getReportByWorkflowId(workflowId) {
-  const meta = readReportsIndex().find((r) => r.workflow_id === workflowId);
+  const meta = loadJsonFile(REPORTS_PATH, []).find((r) => r.workflow_id === workflowId);
   if (!meta) return null;
 
   const mdPath = path.join(REPORTS_ARCHIVE_DIR, `${workflowId}.md`);
   let fixMarkdown = null;
-  if (fs.existsSync(mdPath)) {
-    fixMarkdown = fs.readFileSync(mdPath, 'utf8');
-  }
+  if (fs.existsSync(mdPath)) fixMarkdown = fs.readFileSync(mdPath, 'utf8');
 
-  return {
-    ...meta,
-    fix_markdown: fixMarkdown,
-  };
+  return { ...meta, fix_markdown: fixMarkdown };
 }
 
-module.exports = {
-  saveWorkflowReport,
-  listReports,
-  getReportByWorkflowId,
-};
+module.exports = { saveWorkflowReport, listReports, getReportByWorkflowId };
